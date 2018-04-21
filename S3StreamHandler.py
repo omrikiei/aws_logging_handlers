@@ -1,7 +1,11 @@
+__author__ = 'Omri Eival'
+__version__ = '0.1.1'
+
 from logging import StreamHandler
 from io import BufferedIOBase, BytesIO
 from boto3 import Session
 from datetime import datetime
+
 import signal
 import gevent
 
