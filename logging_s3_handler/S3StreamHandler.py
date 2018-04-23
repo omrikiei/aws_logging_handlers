@@ -6,6 +6,7 @@ from io import BufferedIOBase, BytesIO
 from boto3 import Session
 from datetime import datetime
 
+import atexit
 import signal
 import gevent
 
@@ -18,6 +19,7 @@ class StreamObject:
     """
     Class representation of the s3 object along with all the needed metadata to stream to S3
     """
+
     def __init__(self, s3_resource, bucket_name, filename):
         self.object = s3_resource.Object(bucket_name, filename)
         self.uploader = self.object.initiate_multipart_upload()
@@ -44,6 +46,7 @@ class S3Streamer(BufferedIOBase):
     """
     The stream interface used by the handler which binds to S3 and utilizes the object class
     """
+
     def __init__(self, bucket, key_id, secret, key, chunk_size=DEFAULT_CHUNK_SIZE,
                  max_file_log_time=DEFAULT_ROTATION_TIME_SECS, max_file_size_bytes=MAX_FILE_SIZE_BYTES,
                  encoder='utf-8'):
@@ -58,8 +61,6 @@ class S3Streamer(BufferedIOBase):
         self.current_file_name = "{}_{}".format(key, int(datetime.utcnow().strftime('%s')))
         self.encoder = encoder
 
-        BufferedIOBase.__init__(self)
-
         try:
             self.s3.meta.client.head_bucket(Bucket=bucket)
         except Exception:
@@ -67,9 +68,17 @@ class S3Streamer(BufferedIOBase):
 
         self._bucket = self.s3.Bucket(bucket)
         self._current_object = self._get_stream_object(self.current_file_name)
+        self._rotation_tasks = {}
+
         self._is_open = True
 
-        # BufferedWriter.__init__(self, raw=)
+        BufferedIOBase.__init__(self)
+
+    def add_task(self, task_id, task):
+        self._rotation_tasks[task_id] = task
+
+    def remove_task(self, task_id):
+        del self._rotation_tasks[task_id]
 
     def _get_stream_object(self, filename):
         try:
@@ -86,9 +95,7 @@ class S3Streamer(BufferedIOBase):
         part = self._current_object.uploader.Part(part_num)
         buffer = self._current_object.buffer
         self._current_object.buffer = BytesIO()
-        buffer_size = buffer.tell()
         buffer.seek(0)
-        # TODO: next segment should be spawned
         if async:
             task_id = datetime.utcnow().strftime('%s')
             self._current_object.add_task(task_id,
@@ -99,7 +106,6 @@ class S3Streamer(BufferedIOBase):
             self._current_object.parts.append({'ETag': upload['ETag'], 'PartNumber': part_num})
 
         self._current_object.chunk_count += 1
-        self._current_object.byte_count += buffer_size
 
     @staticmethod
     def _upload_part(s3_object, task_id, part, part_num, buffer):
@@ -107,18 +113,36 @@ class S3Streamer(BufferedIOBase):
         s3_object.parts.append({'ETag': upload['ETag'], 'PartNumber': part_num})
         s3_object.remove_task(task_id)
 
-    #TODO: rotate file
     def _rotate_file(self):
-        pass
 
-    def close(self):
-        gevent.wait(self._current_object.tasks.values())
+        if self._current_object.buffer.tell() > 0:
+            self._rotate_chunk()
+
+        temp_object = self._current_object
+        task_id = datetime.utcnow().strftime('%s')
+        self.add_task(task_id,
+                      gevent.spawn(self._close_stream, temp_object, callback=self.remove_task, task_id=task_id))
+        new_filename = "{}_{}".format(self.key, int(datetime.utcnow().strftime('%s')))
+        self.start_time = int(datetime.utcnow().strftime('%s'))
+        self._current_object = self._get_stream_object(new_filename)
+
+    @staticmethod
+    def _close_stream(stream_object, callback=None, *args, **kwargs):
+        gevent.wait(stream_object.tasks.values())
+        if stream_object.chunk_count > 0:
+            stream_object.uploader.complete(MultipartUpload={'Parts': stream_object.parts})
+        else:
+            stream_object.uploader.abort()
+
+        if callback and callable(callback):
+            callback(*args, **kwargs)
+
+    def close(self, *args, **kwargs):
+
         if self._current_object.buffer.tell() > 0:
             self._rotate_chunk(async=False)
-        if self._current_object.chunk_count > 0:
-            self._current_object.uploader.complete(MultipartUpload={'Parts': self._current_object.parts})
-        else:
-            self._current_object.uploader.abort()
+        gevent.wait(self._rotation_tasks.values())
+        self._close_stream(self._current_object)
 
         self._is_open = False
 
@@ -127,18 +151,24 @@ class S3Streamer(BufferedIOBase):
         return not self._is_open
 
     @property
-    def writable(self):
+    def writable(self, *args, **kwargs):
         return True
 
     def tell(self, *args, **kwargs):
         return self._current_object.byte_count
 
-    def write(self, s):
+    def write(self, *args, **kwargs):
+        s = args[0]
         self._current_object.buffer.write(s.encode(self.encoder))
         self._current_object.byte_count = self._current_object.byte_count + len(s)
 
         if self._current_object.buffer.tell() > self.chunk_size:
             self._rotate_chunk()
+
+        if (self.max_file_size_bytes and self._current_object.byte_count > self.max_file_size_bytes) or (
+                self.max_file_log_time and int(
+            datetime.utcnow().strftime('%s')) - self.start_time > self.max_file_log_time):
+            self._rotate_file()
 
         return len(s)
 
@@ -170,27 +200,24 @@ class S3Handler(StreamHandler):
         # Make sure we gracefully clear the buffers and upload the missing parts before existing
         signal.signal(signal.SIGTERM, self.close)
         signal.signal(signal.SIGINT, self.close)
+        signal.signal(signal.SIGQUIT, self.close)
+        atexit.register(self.close)
 
         StreamHandler.__init__(self, self.stream)
 
-    def close(self):
+    def close(self, *args, **kwargs):
         """
-        Closes the stream - Copied from FileHandler.
+        Closes the stream
         """
         self.acquire()
         try:
-            try:
-                if self.stream:
-                    try:
-                        self.flush()
-                    finally:
-                        stream = self.stream
-                        self.stream = None
-                        if hasattr(stream, "close"):
-                            stream.close()
-            finally:
-                # Issue #19523: call unconditionally to
-                # prevent a handler leak when delay is set
-                StreamHandler.close(self)
+            if self.stream:
+                try:
+                    self.flush()
+                finally:
+                    stream = self.stream
+                    self.stream = None
+                    if hasattr(stream, "close"):
+                        stream.close(*args, **kwargs)
         finally:
             self.release()
