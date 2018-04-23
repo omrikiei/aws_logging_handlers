@@ -1,5 +1,5 @@
 __author__ = 'Omri Eival'
-__version__ = '0.1.1'
+__version__ = '0.1.3'
 
 from logging import StreamHandler
 from io import BufferedIOBase, BytesIO
@@ -8,11 +8,24 @@ from datetime import datetime
 
 import atexit
 import signal
-import gevent
+import threading
 
 DEFAULT_CHUNK_SIZE = 5 * 1024 ** 2  # 5 MB
 DEFAULT_ROTATION_TIME_SECS = 12 * 60 * 60  # 12 hours
 MAX_FILE_SIZE_BYTES = 100 * 1024 ** 2  # 100 MB
+
+
+class Task(threading.Thread):
+
+    def __init__(self, callable_func, *args, **kwargs):
+        self.callable = callable_func
+        self.args = args
+        self.kwargs = kwargs
+
+        threading.Thread.__init__(self)
+
+    def run(self):
+        self.callable(*self.args, **self.kwargs)
 
 
 class StreamObject:
@@ -37,9 +50,14 @@ class StreamObject:
 
     def add_task(self, task_id, task):
         self.tasks[task_id] = task
+        task.start()
 
     def remove_task(self, task_id):
         del self.tasks[task_id]
+
+    def join_tasks(self):
+        [task.join() for task in self.tasks.values()]
+        self.tasks = {}
 
 
 class S3Streamer(BufferedIOBase):
@@ -76,9 +94,13 @@ class S3Streamer(BufferedIOBase):
 
     def add_task(self, task_id, task):
         self._rotation_tasks[task_id] = task
+        task.start()
 
     def remove_task(self, task_id):
         del self._rotation_tasks[task_id]
+
+    def join_tasks(self):
+        [task.join() for task in self._rotation_tasks.values()]
 
     def _get_stream_object(self, filename):
         try:
@@ -99,8 +121,8 @@ class S3Streamer(BufferedIOBase):
         if async:
             task_id = datetime.utcnow().strftime('%s')
             self._current_object.add_task(task_id,
-                                          gevent.spawn(self._upload_part, self._current_object, task_id, part,
-                                                       part_num, buffer))
+                                          Task(self._upload_part, self._current_object, task_id, part, part_num,
+                                               buffer))
         else:
             upload = part.upload(Body=buffer)
             self._current_object.parts.append({'ETag': upload['ETag'], 'PartNumber': part_num})
@@ -111,7 +133,6 @@ class S3Streamer(BufferedIOBase):
     def _upload_part(s3_object, task_id, part, part_num, buffer):
         upload = part.upload(Body=buffer)
         s3_object.parts.append({'ETag': upload['ETag'], 'PartNumber': part_num})
-        s3_object.remove_task(task_id)
 
     def _rotate_file(self):
 
@@ -120,15 +141,14 @@ class S3Streamer(BufferedIOBase):
 
         temp_object = self._current_object
         task_id = datetime.utcnow().strftime('%s')
-        self.add_task(task_id,
-                      gevent.spawn(self._close_stream, temp_object, callback=self.remove_task, task_id=task_id))
+        self.add_task(task_id, Task(self._close_stream, stream_object=temp_object, callback=self.remove_task, task_id=task_id))
         new_filename = "{}_{}".format(self.key, int(datetime.utcnow().strftime('%s')))
         self.start_time = int(datetime.utcnow().strftime('%s'))
         self._current_object = self._get_stream_object(new_filename)
 
     @staticmethod
     def _close_stream(stream_object, callback=None, *args, **kwargs):
-        gevent.wait(stream_object.tasks.values())
+        stream_object.join_tasks()
         if stream_object.chunk_count > 0:
             stream_object.uploader.complete(MultipartUpload={'Parts': stream_object.parts})
         else:
@@ -141,7 +161,7 @@ class S3Streamer(BufferedIOBase):
 
         if self._current_object.buffer.tell() > 0:
             self._rotate_chunk(async=False)
-        gevent.wait(self._rotation_tasks.values())
+        self.join_tasks()
         self._close_stream(self._current_object)
 
         self._is_open = False
@@ -178,11 +198,11 @@ class S3Handler(StreamHandler):
     A Logging handler class that streams log records to S3 by chunks
     """
 
-    def __init__(self, filename, bucket, key_id, secret, chunk_size=DEFAULT_CHUNK_SIZE,
+    def __init__(self, file_path, bucket, key_id, secret, chunk_size=DEFAULT_CHUNK_SIZE,
                  time_rotation=DEFAULT_ROTATION_TIME_SECS, max_file_size_bytes=MAX_FILE_SIZE_BYTES, encoder='utf-8'):
         """
 
-        :param filename: The name of the S3 object
+        :param file_path: The path of the S3 object
         :param bucket: The id of the S3 bucket
         :param key_id: Authentication key
         :param secret: Authentication secret
@@ -194,10 +214,10 @@ class S3Handler(StreamHandler):
         self.bucket = bucket
         self.secret = secret
         self.key_id = key_id
-        self.stream = S3Streamer(self.bucket, self.key_id, self.secret, filename, chunk_size, time_rotation,
+        self.stream = S3Streamer(self.bucket, self.key_id, self.secret, file_path, chunk_size, time_rotation,
                                  max_file_size_bytes, encoder)
 
-        # Make sure we gracefully clear the buffers and upload the missing parts before existing
+        # Make sure we gracefully clear the buffers and upload the missing parts before exiting
         signal.signal(signal.SIGTERM, self.close)
         signal.signal(signal.SIGINT, self.close)
         signal.signal(signal.SIGQUIT, self.close)

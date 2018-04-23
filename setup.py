@@ -3,13 +3,13 @@ from distutils.core import setup
 setup(
     name='logging-s3-handler',
     packages=['logging_s3_handler'],
-    version='0.1.2',
-    description='A logging handler that streams log records to Aws S3 objects',
+    version='0.1.3',
+    description='A multithreaded logging handler that streams log records to Aws S3 objects',
     author='Omri Eival',
     author_email='omrieival@gmail.com',
     url='https://github.com/omrikiei/logging_s3_handler/',
-    download_url='https://github.com/omrikiei/logging_s3_handler/archive/0.1.2.tar.gz',
-    keywords=['logging', 's3', 'aws', 'handler'],
+    download_url='https://github.com/omrikiei/logging_s3_handler/archive/0.1.3.tar.gz',
+    keywords=['logging', 's3', 'aws', 'handler', 'amazon'],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
@@ -26,7 +26,6 @@ setup(
 
     ],
     install_requires=[
-        'boto3',
-        'gevent >= 1.2.2'
+        'boto3'
     ],
 )

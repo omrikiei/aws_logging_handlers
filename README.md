@@ -1,16 +1,15 @@
 # Logging S3 Handler
 
-A python logging handler that streams lines to Aws S3 objects
+A python multithreaded logging handler that streams lines to Aws S3 objects
 
 ## Getting Started
 
 ### Prerequisites
 
-Asynchronous multipart uploading relies on gevent greenlets
+Asynchronous multipart uploading relies on the ability to use the threading library
 
 ```
 boto3
-gevent >= 1.2.2
 ```
 
 ### Installing
