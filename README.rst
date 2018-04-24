@@ -1,7 +1,7 @@
 Logging S3 Handler
 ==================
 
-A python multithreaded logging handler that streams lines to Aws S3
+A python multithreaded logging handler that streams lines to AWS S3
 objects
 
 Getting Started
@@ -59,11 +59,6 @@ Stream log records to S3
         logger.warning("test warning message")
         logger.error("test error message")
 
-Contributing
-------------
-
-Feel free to contact me for feature requests, improvements,
-participation questions and what not omrieival@gmail.com
 
 To be developed
 ---------------

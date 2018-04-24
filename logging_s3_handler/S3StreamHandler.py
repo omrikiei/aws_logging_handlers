@@ -29,7 +29,7 @@ def task_worker(q):
         if not q.empty():
             task = q.get()
             if task == -1:
-                break
+                return
             assert isinstance(task, (Task,)), "task should be of type `Task` only!"
             task.callable_func(*task.args, **task.kwargs)
             q.task_done()
@@ -160,6 +160,8 @@ class S3Streamer(BufferedIOBase):
 
         if self._current_object.buffer.tell() > 0:
             self._rotate_chunk(async=False)
+
+        self._current_object.join_tasks()
         self.join_tasks()
 
         # Stop the worker threads
