@@ -77,7 +77,7 @@ class S3Streamer(BufferedIOBase):
         self.session = Session(key_id, secret)
         self.s3 = self.session.resource('s3')
         self.start_time = int(datetime.utcnow().strftime('%s'))
-        self.key = key
+        self.key = key.strip('/')
         self.chunk_size = chunk_size
         self.max_file_log_time = max_file_log_time
         self.max_file_size_bytes = max_file_size_bytes
