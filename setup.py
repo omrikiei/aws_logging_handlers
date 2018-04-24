@@ -7,14 +7,14 @@ def read(fname):
 setup(
     name='logging-s3-handler',
     packages=['logging_s3_handler'],
-    version='0.1.3.1',
+    version='0.1.4',
     description='A multithreaded logging handler that streams log records to Aws S3 objects',
     long_description=read('README.rst'),
     author='Omri Eival',
     author_email='omrieival@gmail.com',
     url='https://github.com/omrikiei/logging_s3_handler/',
-    download_url='https://github.com/omrikiei/logging_s3_handler/archive/0.1.3.tar.gz',
-    keywords=['logging', 's3', 'aws', 'handler', 'amazon'],
+    download_url='https://github.com/omrikiei/logging_s3_handler/archive/0.1.4.tar.gz',
+    keywords=['logging', 's3', 'aws', 'handler', 'amazon','stream'],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',

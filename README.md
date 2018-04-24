@@ -6,7 +6,7 @@ A python multithreaded logging handler that streams lines to Aws S3 objects
 
 ### Prerequisites
 
-Asynchronous multipart uploading relies on the ability to use the threading library
+Asynchronous multipart uploading relies on the ability to use multiple threads
 
 ```
 boto3
@@ -37,7 +37,7 @@ SECRET="your_aws_auth_secret"
 bucket="test_bucket" # The bucket should already exist
 
 # The log will be rotated to a new object either when an object reaches 5 MB or when 120 seconds pass from the last rotation/initial logging
-handler = S3Handler("test_log", bucket, KEY_ID, SECRET, time_rotation=120, max_file_size_bytes=5*1024**2)
+handler = S3Handler("test_log", bucket, KEY_ID, SECRET, time_rotation=120, max_file_size_bytes=5*1024**2, workers=3)
 formatter = logging.Formatter('[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
 logger = logging.getLogger('root')
@@ -56,15 +56,9 @@ Feel free to contact me for feature requests, improvements, participation questi
 omrieival@gmail.com
 
 ## To be developed
-* Object rotation by size
-* Object rotation by time interval
 * Logging and upload metrics
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE) file for details
-
-## Acknowledgments
-
-* Some of the code seen here was inspired by the smart_open package, which I considered utilizing for my purposes but decided to code my own way to match my exact needs
 
