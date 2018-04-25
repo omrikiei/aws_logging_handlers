@@ -2,12 +2,15 @@ from distutils.core import setup
 import io, os
 
 def read(fname):
-    return io.open(os.path.join(os.path.dirname(__file__), fname), encoding='utf-8').read()
+    try:
+      return io.open(os.path.join(os.path.dirname(__file__), fname), encoding='utf-8').read()
+    except Exception:
+      return ""
 
 setup(
     name='logging-s3-handler',
     packages=['logging_s3_handler'],
-    version='0.1.4',
+    version='0.1.4.1',
     description='A multithreaded logging handler that streams log records to Aws S3 objects',
     long_description=read('README.rst'),
     author='Omri Eival',
