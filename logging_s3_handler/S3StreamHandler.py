@@ -4,6 +4,7 @@ from logging import StreamHandler
 from io import BufferedIOBase, BytesIO
 from boto3 import Session
 from datetime import datetime
+from collections import namedtuple
 
 import atexit
 import signal
@@ -15,6 +16,23 @@ DEFAULT_ROTATION_TIME_SECS = 12 * 60 * 60  # 12 hours
 MAX_FILE_SIZE_BYTES = 100 * 1024 ** 2  # 100 MB
 MIN_WORKERS_NUM = 2
 
+
+def _is_non_empty_string(s):
+    return isinstance(s, str) and s != ""
+
+
+def _empty_str_err(s):
+    return "{} should be a non-empty string".format(s)
+
+
+def _is_positive_int(n):
+    return isinstance(n, int) and n > 0
+
+
+def _bad_integer_err(n):
+    return "{} should be a positive integer".format(n)
+
+ValidationRule = namedtuple('ValidationRule', ['arg', 'func', 'message'])
 
 class Task:
     def __init__(self, callable_func, *args, **kwargs):
@@ -207,7 +225,8 @@ class S3Handler(StreamHandler):
     """
 
     def __init__(self, file_path, bucket, key_id, secret, chunk_size=DEFAULT_CHUNK_SIZE,
-                 time_rotation=DEFAULT_ROTATION_TIME_SECS, max_file_size_bytes=MAX_FILE_SIZE_BYTES, encoder='utf-8'):
+                 time_rotation=DEFAULT_ROTATION_TIME_SECS, max_file_size_bytes=MAX_FILE_SIZE_BYTES, encoder='utf-8',
+                 max_threads=3):
         """
 
         :param file_path: The path of the S3 object
@@ -218,12 +237,29 @@ class S3Handler(StreamHandler):
         :param time_rotation: Interval in seconds to rotate the file by - default 12 hours
         :param max_file_size_bytes: Maximum file size in bytes before rotation - default 100MB
         :param encoder: default utf-8
+        :param max_threads: the number of threads that a stream handler would run for file and chunk rotation tasks
         """
+
+        args_validation = (
+            ValidationRule(file_path, _is_non_empty_string, _empty_str_err('file_path')),
+            ValidationRule(bucket, _is_non_empty_string, _empty_str_err('bucket')),
+            ValidationRule(key_id, _is_non_empty_string, _empty_str_err('key_id')),
+            ValidationRule(secret, _is_non_empty_string, _empty_str_err('secret')),
+            ValidationRule(chunk_size, _is_positive_int, _bad_integer_err('chunk_size')),
+            ValidationRule(time_rotation, _is_positive_int, _bad_integer_err('time_rotation')),
+            ValidationRule(max_file_size_bytes, _is_positive_int, _bad_integer_err('max_file_size_bytes')),
+            ValidationRule(encoder, _is_non_empty_string, _empty_str_err('encoder')),
+            ValidationRule(max_threads, _is_positive_int, _bad_integer_err('thread_count')),
+        )
+
+        for rule in args_validation:
+            assert rule[1](rule[0]), rule[3]
+
         self.bucket = bucket
         self.secret = secret
         self.key_id = key_id
         self.stream = S3Streamer(self.bucket, self.key_id, self.secret, file_path, chunk_size, time_rotation,
-                                 max_file_size_bytes, encoder)
+                                 max_file_size_bytes, encoder, workers=max_threads)
 
         # Make sure we gracefully clear the buffers and upload the missing parts before exiting
         signal.signal(signal.SIGTERM, self.close)
