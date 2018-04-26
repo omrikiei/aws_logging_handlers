@@ -63,6 +63,7 @@ Stream log records to S3
 To be developed
 ---------------
 
+-  Support for asyncio
 -  Logging and upload metrics
 
 License

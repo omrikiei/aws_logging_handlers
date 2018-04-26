@@ -51,6 +51,7 @@ for i in range(0, 100000):
 ```
 
 ## To be developed
+* Support for asyncio
 * Logging and upload metrics
 
 ## License
