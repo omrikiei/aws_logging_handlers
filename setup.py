@@ -8,16 +8,16 @@ def read(fname):
       return ""
 
 setup(
-    name='logging-s3-handler',
-    packages=['logging_s3_handler'],
+    name='aws-logging-handlers',
+    packages=['aws_logging_handlers'],
     version='0.1.4.1',
-    description='A multithreaded logging handler that streams log records to Aws S3 objects',
+    description='Logging handlers to AWS services that support S3 and Kinesis stream logging with multiple threads',
     long_description=read('README.rst'),
     author='Omri Eival',
     author_email='omrieival@gmail.com',
-    url='https://github.com/omrikiei/logging_s3_handler/',
-    download_url='https://github.com/omrikiei/logging_s3_handler/archive/0.1.4.tar.gz',
-    keywords=['logging', 's3', 'aws', 'handler', 'amazon','stream'],
+    url='https://github.com/omrikiei/aws_logging_handlers/',
+    download_url='https://github.com/omrikiei/aws_logging_handlers/archive/0.1.4.1.tar.gz',
+    keywords=['logging', 's3', 'aws', 'handler', 'amazon', 'stream', 'kinesis', 'firehose'],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',

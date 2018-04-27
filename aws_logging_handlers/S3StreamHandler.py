@@ -4,7 +4,9 @@ from logging import StreamHandler
 from io import BufferedIOBase, BytesIO
 from boto3 import Session
 from datetime import datetime
-from collections import namedtuple
+from aws_logging_handlers.validation import is_non_empty_string, is_positive_int, empty_str_err, bad_integer_err, \
+    ValidationRule
+from aws_logging_handlers.tasks import Task, task_worker
 
 import atexit
 import signal
@@ -15,42 +17,6 @@ DEFAULT_CHUNK_SIZE = 5 * 1024 ** 2  # 5 MB
 DEFAULT_ROTATION_TIME_SECS = 12 * 60 * 60  # 12 hours
 MAX_FILE_SIZE_BYTES = 100 * 1024 ** 2  # 100 MB
 MIN_WORKERS_NUM = 2
-
-
-def _is_non_empty_string(s):
-    return isinstance(s, str) and s != ""
-
-
-def _empty_str_err(s):
-    return "{} should be a non-empty string".format(s)
-
-
-def _is_positive_int(n):
-    return isinstance(n, int) and n > 0
-
-
-def _bad_integer_err(n):
-    return "{} should be a positive integer".format(n)
-
-ValidationRule = namedtuple('ValidationRule', ['arg', 'func', 'message'])
-
-class Task:
-    def __init__(self, callable_func, *args, **kwargs):
-        assert callable(callable_func), "First argument in task should be callable"
-        self.callable_func = callable_func
-        self.args = args
-        self.kwargs = kwargs
-
-
-def task_worker(q):
-    while True:
-        if not q.empty():
-            task = q.get()
-            if task == -1:
-                return
-            assert isinstance(task, (Task,)), "task should be of type `Task` only!"
-            task.callable_func(*task.args, **task.kwargs)
-            q.task_done()
 
 
 class StreamObject:
@@ -241,15 +207,15 @@ class S3Handler(StreamHandler):
         """
 
         args_validation = (
-            ValidationRule(file_path, _is_non_empty_string, _empty_str_err('file_path')),
-            ValidationRule(bucket, _is_non_empty_string, _empty_str_err('bucket')),
-            ValidationRule(key_id, _is_non_empty_string, _empty_str_err('key_id')),
-            ValidationRule(secret, _is_non_empty_string, _empty_str_err('secret')),
-            ValidationRule(chunk_size, _is_positive_int, _bad_integer_err('chunk_size')),
-            ValidationRule(time_rotation, _is_positive_int, _bad_integer_err('time_rotation')),
-            ValidationRule(max_file_size_bytes, _is_positive_int, _bad_integer_err('max_file_size_bytes')),
-            ValidationRule(encoder, _is_non_empty_string, _empty_str_err('encoder')),
-            ValidationRule(max_threads, _is_positive_int, _bad_integer_err('thread_count')),
+            ValidationRule(file_path, is_non_empty_string, empty_str_err('file_path')),
+            ValidationRule(bucket, is_non_empty_string, empty_str_err('bucket')),
+            ValidationRule(key_id, is_non_empty_string, empty_str_err('key_id')),
+            ValidationRule(secret, is_non_empty_string, empty_str_err('secret')),
+            ValidationRule(chunk_size, is_positive_int, bad_integer_err('chunk_size')),
+            ValidationRule(time_rotation, is_positive_int, bad_integer_err('time_rotation')),
+            ValidationRule(max_file_size_bytes, is_positive_int, bad_integer_err('max_file_size_bytes')),
+            ValidationRule(encoder, is_non_empty_string, empty_str_err('encoder')),
+            ValidationRule(max_threads, is_positive_int, bad_integer_err('thread_count')),
         )
 
         for rule in args_validation:
