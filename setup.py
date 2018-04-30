@@ -10,13 +10,13 @@ def read(fname):
 setup(
     name='aws-logging-handlers',
     packages=['aws_logging_handlers'],
-    version='0.1.4.1',
+    version='0.1.5',
     description='Logging handlers to AWS services that support S3 and Kinesis stream logging with multiple threads',
     long_description=read('README.rst'),
     author='Omri Eival',
     author_email='omrieival@gmail.com',
     url='https://github.com/omrikiei/aws_logging_handlers/',
-    download_url='https://github.com/omrikiei/aws_logging_handlers/archive/0.1.4.1.tar.gz',
+    download_url='https://github.com/omrikiei/aws_logging_handlers/archive/0.1.5.tar.gz',
     keywords=['logging', 's3', 'aws', 'handler', 'amazon', 'stream', 'kinesis', 'firehose'],
     classifiers=[
         'Development Status :: 3 - Alpha',

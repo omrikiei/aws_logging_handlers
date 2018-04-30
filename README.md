@@ -4,6 +4,8 @@ A python multithreaded logging handler package that streams records to AWS servi
 * S3
 * Kinesis
 
+Supports gzip compression(in S3)
+
 ## Getting Started
 
 ### Prerequisites
@@ -34,7 +36,7 @@ bucket="test_bucket" # The bucket should already exist
 
 # The log will be rotated to a new object either when an object reaches 5 MB or when 120 seconds pass from the last rotation/initial logging
 s3_handler = S3Handler("test_log", bucket, KEY_ID, SECRET, time_rotation=120, max_file_size_bytes=5*1024**2, workers=3)
-kinesis_handler = KinesisHandler(KEY_ID, SECRET, 'log_test', 'us-east-1', partition='test1', workers=1)
+kinesis_handler = KinesisHandler(KEY_ID, SECRET, 'log_test', 'us-east-1', partition='test1', workers=1, compress=False)
 formatter = logging.Formatter('[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s')
 s3_handler.setFormatter(formatter)
 kinesis_handler.setFormatter(formatter)
@@ -52,7 +54,6 @@ for i in range(0, 100000):
 ## To be developed
 * Support for asyncio
 * Logging and upload metrics
-* support for real time compression(at least for s3)
 
 ## License
 

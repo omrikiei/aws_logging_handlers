@@ -17,4 +17,13 @@ def bad_integer_err(n):
     return "{} should be a positive integer".format(n)
 
 
+def is_boolean(b):
+    return isinstance(b, bool)
+
+
+def bad_type_error(n, t):
+    return "{} should be of type {}".format(n, t)
+
+
+
 ValidationRule = namedtuple('ValidationRule', ['arg', 'func', 'message'])

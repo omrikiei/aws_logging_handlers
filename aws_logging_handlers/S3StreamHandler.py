@@ -4,14 +4,15 @@ from logging import StreamHandler
 from io import BufferedIOBase, BytesIO
 from boto3 import Session
 from datetime import datetime
-from aws_logging_handlers.validation import is_non_empty_string, is_positive_int, empty_str_err, bad_integer_err, \
-    ValidationRule
+from aws_logging_handlers.validation import is_non_empty_string, is_positive_int, is_boolean, bad_type_error, \
+    empty_str_err, bad_integer_err, ValidationRule
 from aws_logging_handlers.tasks import Task, task_worker
 
 import atexit
 import signal
 import threading
 import queue
+import gzip
 
 DEFAULT_CHUNK_SIZE = 5 * 1024 ** 2  # 5 MB
 DEFAULT_ROTATION_TIME_SECS = 12 * 60 * 60  # 12 hours
@@ -56,7 +57,7 @@ class S3Streamer(BufferedIOBase):
 
     def __init__(self, bucket, key_id, secret, key, chunk_size=DEFAULT_CHUNK_SIZE,
                  max_file_log_time=DEFAULT_ROTATION_TIME_SECS, max_file_size_bytes=MAX_FILE_SIZE_BYTES,
-                 encoder='utf-8', workers=2):
+                 encoder='utf-8', workers=2, compress=False):
 
         self.session = Session(key_id, secret)
         self.s3 = self.session.resource('s3')
@@ -66,6 +67,8 @@ class S3Streamer(BufferedIOBase):
         self.max_file_log_time = max_file_log_time
         self.max_file_size_bytes = max_file_size_bytes
         self.current_file_name = "{}_{}".format(key, int(datetime.utcnow().strftime('%s')))
+        if compress:
+            self.current_file_name = "{}.gz".format(self.current_file_name)
         self.encoder = encoder
 
         try:
@@ -81,8 +84,15 @@ class S3Streamer(BufferedIOBase):
                                   in range(max(int(max(workers, MIN_WORKERS_NUM) / 2), 1))]
 
         self._is_open = True
+        self.compress = compress
 
         BufferedIOBase.__init__(self)
+
+    def get_filename(self):
+        filename = "{}_{}".format(self.key, self.start_time)
+        if self.compress:
+            return filename
+        return "{}.gz".format(filename)
 
     def add_task(self, task):
         self._rotation_queue.put(task)
@@ -125,8 +135,8 @@ class S3Streamer(BufferedIOBase):
 
         temp_object = self._current_object
         self.add_task(Task(self._close_stream, stream_object=temp_object))
-        new_filename = "{}_{}".format(self.key, int(datetime.utcnow().strftime('%s')))
         self.start_time = int(datetime.utcnow().strftime('%s'))
+        new_filename = self.get_filename()
         self._current_object = self._get_stream_object(new_filename)
 
     @staticmethod
@@ -170,8 +180,8 @@ class S3Streamer(BufferedIOBase):
         return self._current_object.byte_count
 
     def write(self, *args, **kwargs):
-        s = args[0]
-        self._current_object.buffer.write(s.encode(self.encoder))
+        s = self.compress and gzip.compress(args[0].encode(self.encoder)) or args[0].encode(self.encoder)
+        self._current_object.buffer.write(s)
         self._current_object.byte_count = self._current_object.byte_count + len(s)
 
         if self._current_object.buffer.tell() > self.chunk_size:
@@ -192,7 +202,7 @@ class S3Handler(StreamHandler):
 
     def __init__(self, file_path, bucket, key_id, secret, chunk_size=DEFAULT_CHUNK_SIZE,
                  time_rotation=DEFAULT_ROTATION_TIME_SECS, max_file_size_bytes=MAX_FILE_SIZE_BYTES, encoder='utf-8',
-                 max_threads=3):
+                 max_threads=3, compress=False):
         """
 
         :param file_path: The path of the S3 object
@@ -204,6 +214,7 @@ class S3Handler(StreamHandler):
         :param max_file_size_bytes: Maximum file size in bytes before rotation - default 100MB
         :param encoder: default utf-8
         :param max_threads: the number of threads that a stream handler would run for file and chunk rotation tasks
+        :param compress: Boolean indicating weather to save a compressed gz suffixed file
         """
 
         args_validation = (
@@ -216,6 +227,7 @@ class S3Handler(StreamHandler):
             ValidationRule(max_file_size_bytes, is_positive_int, bad_integer_err('max_file_size_bytes')),
             ValidationRule(encoder, is_non_empty_string, empty_str_err('encoder')),
             ValidationRule(max_threads, is_positive_int, bad_integer_err('thread_count')),
+            ValidationRule(compress, is_boolean, bad_type_error('compress', 'boolean'))
         )
 
         for rule in args_validation:
@@ -225,7 +237,7 @@ class S3Handler(StreamHandler):
         self.secret = secret
         self.key_id = key_id
         self.stream = S3Streamer(self.bucket, self.key_id, self.secret, file_path, chunk_size, time_rotation,
-                                 max_file_size_bytes, encoder, workers=max_threads)
+                                 max_file_size_bytes, encoder, workers=max_threads, compress=compress)
 
         # Make sure we gracefully clear the buffers and upload the missing parts before exiting
         signal.signal(signal.SIGTERM, self.close)
