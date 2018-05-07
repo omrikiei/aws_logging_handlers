@@ -37,7 +37,7 @@ Stream log records to S3 and Kinesis
 ::
 
    import logging
-   from logging_s3_handler import S3Handler
+   from aws_logging_handlers import S3Handler, KinesisHandler
 
    KEY_ID="your_aws_auth_key"
    SECRET="your_aws_auth_secret"
