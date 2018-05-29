@@ -90,7 +90,7 @@ class S3Streamer(BufferedIOBase):
 
     def get_filename(self):
         filename = "{}_{}".format(self.key, self.start_time)
-        if self.compress:
+        if not self.compress:
             return filename
         return "{}.gz".format(filename)
 
