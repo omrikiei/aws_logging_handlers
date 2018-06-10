@@ -3,7 +3,8 @@ __author__ = 'Omri Eival'
 from logging import StreamHandler
 from io import BufferedIOBase, BytesIO
 from boto3 import client
-from aws_logging_handlers.validation import is_non_empty_string, is_positive_int, empty_str_err, bad_integer_err, ValidationRule
+from aws_logging_handlers.validation import is_non_empty_string, is_positive_int, empty_str_err, bad_integer_err, \
+    ValidationRule
 from aws_logging_handlers.tasks import Task, task_worker
 
 import logging
@@ -15,25 +16,6 @@ import queue
 MAX_CHUNK_SIZE = 1 * 1024 ** 2  # 1 MB
 DEFAULT_CHUNK_SIZE = int(0.5 * 1024 ** 2)  # 0.5 MB
 MIN_WORKERS_NUM = 1
-
-
-class Task:
-    def __init__(self, callable_func, *args, **kwargs):
-        assert callable(callable_func), "First argument in task should be callable"
-        self.callable_func = callable_func
-        self.args = args
-        self.kwargs = kwargs
-
-
-def task_worker(q):
-    while True:
-        if not q.empty():
-            task = q.get()
-            if task == -1:
-                return
-            assert isinstance(task, (Task,)), "task should be of type `Task` only!"
-            task.callable_func(*task.args, **task.kwargs)
-            q.task_done()
 
 
 class KinesisStreamer(BufferedIOBase):
