@@ -55,11 +55,11 @@ class S3Streamer(BufferedIOBase):
     _stream_buffer_queue = queue.Queue()
     _rotation_queue = queue.Queue()
 
-    def __init__(self, bucket, key_id, secret, key, chunk_size=DEFAULT_CHUNK_SIZE,
+    def __init__(self, bucket, key, *, chunk_size=DEFAULT_CHUNK_SIZE,
                  max_file_log_time=DEFAULT_ROTATION_TIME_SECS, max_file_size_bytes=MAX_FILE_SIZE_BYTES,
-                 encoder='utf-8', workers=2, compress=False):
+                 encoder='utf-8', workers=2, compress=False, key_id=None, secret=None, token=None):
 
-        self.session = Session(key_id, secret)
+        self.session = Session(aws_access_key_id=key_id, aws_secret_access_key=secret, aws_session_token=token)
         self.s3 = self.session.resource('s3')
         self.start_time = int(datetime.utcnow().strftime('%s'))
         self.key = key.strip('/')
@@ -107,7 +107,7 @@ class S3Streamer(BufferedIOBase):
         except Exception:
             raise RuntimeError('Failed to open new S3 stream object')
 
-    def _rotate_chunk(self, async=True):
+    def _rotate_chunk(self, run_async=True):
 
         assert self._current_object, "Stream object not found"
 
@@ -116,7 +116,7 @@ class S3Streamer(BufferedIOBase):
         buffer = self._current_object.buffer
         self._current_object.buffer = BytesIO()
         buffer.seek(0)
-        if async:
+        if run_async:
             self._current_object.add_task(Task(self._upload_part, self._current_object, part, part_num, buffer))
         else:
             self._upload_part(self._current_object, part, part_num, buffer)
@@ -153,7 +153,7 @@ class S3Streamer(BufferedIOBase):
     def close(self, *args, **kwargs):
 
         if self._current_object.buffer.tell() > 0:
-            self._rotate_chunk(async=False)
+            self._rotate_chunk(run_async=False)
 
         self._current_object.join_tasks()
         self.join_tasks()
@@ -236,8 +236,9 @@ class S3Handler(StreamHandler):
         self.bucket = bucket
         self.secret = secret
         self.key_id = key_id
-        self.stream = S3Streamer(self.bucket, self.key_id, self.secret, file_path, chunk_size, time_rotation,
-                                 max_file_size_bytes, encoder, workers=max_threads, compress=compress)
+        self.stream = S3Streamer(self.bucket, file_path, chunk_size=chunk_size, max_file_log_time=time_rotation,
+                                 max_file_size_bytes=max_file_size_bytes, encoder=encoder, workers=max_threads,
+                                 compress=compress, key_id=self.key_id, secret=self.secret)
 
         # Make sure we gracefully clear the buffers and upload the missing parts before exiting
         signal.signal(signal.SIGTERM, self.close)

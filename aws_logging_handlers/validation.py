@@ -24,6 +24,8 @@ def is_boolean(b):
 def bad_type_error(n, t):
     return "{} should be of type {}".format(n, t)
 
-
+    
+def is_string_func(o):
+    return isinstance(o, str) and o or isinstance(o, function)
 
 ValidationRule = namedtuple('ValidationRule', ['arg', 'func', 'message'])

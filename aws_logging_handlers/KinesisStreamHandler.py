@@ -3,8 +3,8 @@ __author__ = 'Omri Eival'
 from logging import StreamHandler
 from io import BufferedIOBase, BytesIO
 from boto3 import client
-from aws_logging_handlers.validation import is_non_empty_string, is_positive_int, empty_str_err, bad_integer_err, \
-    ValidationRule
+from aws_logging_handlers.validation import is_string_func, is_non_empty_string, is_positive_int, empty_str_err, \
+    bad_integer_err, ValidationRule
 from aws_logging_handlers.tasks import Task, task_worker
 
 import logging
@@ -58,7 +58,7 @@ class KinesisStreamer(BufferedIOBase):
     def join_tasks(self):
         self.tasks.join()
 
-    def _rotate_chunk(self, async=True):
+    def _rotate_chunk(self, run_async=True):
 
         assert self._stream, "Stream object not found"
 
@@ -71,7 +71,7 @@ class KinesisStreamer(BufferedIOBase):
             self._stream.write(buffer.read())
         buffer.seek(0)
 
-        if async:
+        if run_async:
             self.add_task(Task(self._upload_part, buffer))
         else:
             self._upload_part(buffer)
@@ -89,7 +89,7 @@ class KinesisStreamer(BufferedIOBase):
     def close(self, *args, **kwargs):
 
         if self._stream.tell() > 0:
-            self._rotate_chunk(async=False)
+            self._rotate_chunk(run_async=False)
 
         self.join_tasks()
 
@@ -125,7 +125,7 @@ class KinesisHandler(StreamHandler):
     A Logging handler class that streams log records to AWS Kinesis by chunks
     """
 
-    def __init__(self, key_id, secret, stream_name, region, partition='single', chunk_size=DEFAULT_CHUNK_SIZE,
+    def __init__(self, key_id, secret, stream_name, region, *, partition='single', chunk_size=DEFAULT_CHUNK_SIZE,
                  encoder='utf-8', workers=3):
         """
 
@@ -144,7 +144,7 @@ class KinesisHandler(StreamHandler):
             ValidationRule(secret, is_non_empty_string, empty_str_err('secret')),
             ValidationRule(stream_name, is_non_empty_string, empty_str_err('stream_name')),
             ValidationRule(region, is_non_empty_string, empty_str_err('region')),
-            ValidationRule(partition, is_non_empty_string, empty_str_err('partition')),
+            ValidationRule(partition, is_string_func, empty_str_err('partition')),
             ValidationRule(chunk_size, is_positive_int, bad_integer_err('chunk_size')),
             ValidationRule(encoder, is_non_empty_string, empty_str_err('encoder')),
             ValidationRule(workers, is_positive_int, bad_integer_err('workers')),
