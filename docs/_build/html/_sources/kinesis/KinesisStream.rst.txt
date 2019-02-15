@@ -1,4 +1,0 @@
-KinesisStream
-================================================
-
-  .. autoclass:: Kinesis.KinesisStream

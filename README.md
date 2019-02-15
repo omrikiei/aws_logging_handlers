@@ -26,7 +26,7 @@ pip install aws-logging-handlers
 
 ### Examples
 Stream log records to S3 and Kinesis
-```
+```python
 import logging
 from aws_logging_handlers import S3Handler, KinesisHandler
 
@@ -35,7 +35,7 @@ bucket="test_bucket" # The bucket should already exist
 # The log will be rotated to a new object either when an object reaches 5 MB or when 120 seconds pass from the last rotation/initial logging
 s3_handler = S3Handler("test_log", bucket, workers=3)
 kinesis_handler = KinesisHandler('log_test', 'us-east-1', workers=1)
-formatter = logging.Formatter('[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s')
+formatter = logging.Formatter('[%(asctime)s] %(filename)s:%(lineno)d} %(levelname)s - %(message)s')
 s3_handler.setFormatter(formatter)
 kinesis_handler.setFormatter(formatter)
 logger = logging.getLogger('root')

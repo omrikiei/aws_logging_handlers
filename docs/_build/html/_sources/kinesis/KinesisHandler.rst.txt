@@ -1,4 +1,0 @@
-KinesisHandler
-================================================
-
-  .. autoclass:: Kinesis.KinesisHandler
