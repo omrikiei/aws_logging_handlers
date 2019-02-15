@@ -15,6 +15,8 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../aws_logging_handlers/'))
+autodoc_mock_imports = ['boto3']
+
 
 
 # -- Project information -----------------------------------------------------
