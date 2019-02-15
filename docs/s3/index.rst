@@ -1,6 +1,6 @@
 S3
 =====================
-.. automodule:: S3
+.. automodule:: aws_logging_handlers.S3
 
 .. toctree::
    :maxdepth: 2
