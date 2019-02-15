@@ -1,4 +1,4 @@
 KinesisStream
 ================================================
 
-  .. autoclass:: aws_logging_handlers.Kinesis.KinesisStream
+  .. autoclass:: Kinesis.KinesisStream

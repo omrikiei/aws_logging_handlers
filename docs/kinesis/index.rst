@@ -1,6 +1,6 @@
 Kinesis
 =====================
-.. automodule:: aws_logging_handlers.Kinesis
+.. automodule:: Kinesis
 
 .. toctree::
    :maxdepth: 2
