@@ -1,3 +1,6 @@
+"""
+Kinesis Binding Module with logging handler and stream object
+"""
 __author__ = 'Omri Eival'
 
 from logging import StreamHandler
