@@ -1,30 +1,29 @@
-from distutils.core import setup
-import io, os
+from setuptools import setup, find_packages
+import os
+
 
 def read(fname):
     try:
-      return io.open(os.path.join(os.path.dirname(__file__), fname), encoding='utf-8').read()
-    except Exception:
-      return ""
+        return open(os.path.join(os.path.dirname(__file__), fname), 'r').read()
+    except:
+        return ""
+
 
 setup(
     name='aws-logging-handlers',
-    packages=['aws_logging_handlers', 'aws_logging_handlers.tasks'],
-    version='0.1.7',
-    description='Logging handlers to AWS services that support S3 and Kinesis stream logging with multiple threads',
+    packages=['aws_logging_handlers'],
+    version='2.0.1',
+    description='Logging aws_logging_handlers to AWS services that support S3 and Kinesis stream logging with multiple threads',
     long_description=read('README.rst'),
     author='Omri Eival',
     author_email='omrieival@gmail.com',
     url='https://github.com/omrikiei/aws_logging_handlers/',
-    download_url='https://github.com/omrikiei/aws_logging_handlers/archive/0.1.7.tar.gz',
+    download_url='https://github.com/omrikiei/aws_logging_handlers/archive/2.0.1.tar.gz',
     keywords=['logging', 's3', 'aws', 'handler', 'amazon', 'stream', 'kinesis', 'firehose'],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.2',
         'Programming Language :: Python :: 3.3',
@@ -34,6 +33,8 @@ setup(
         'Programming Language :: Python :: 3.7',
 
     ],
+    test_suite='nose.collector',
+    tests_require=['nose'],
     install_requires=[
         'boto3'
     ],
