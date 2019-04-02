@@ -28,7 +28,8 @@ pip install aws-logging-handlers
 Stream log records to S3 and Kinesis
 ```python
 import logging
-from aws_logging_handlers import S3Handler, KinesisHandler
+from aws_logging_handlers.S3 import S3Handler
+from aws_logging_handlers.Kinesis import KinesisHandler
 
 bucket="test_bucket" # The bucket should already exist
 
