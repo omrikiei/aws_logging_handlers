@@ -58,7 +58,7 @@ class KinesisStream(BufferedIOBase):
         except Exception:
             raise ValueError('Kinesis stream %s does not exist or inactive, or insufficient permissions' % stream_name)
 
-        self.workers = [threading.Thread(target=task_worker, args=(self.tasks,)).start() for _ in
+        self.workers = [threading.Thread(target=task_worker, args=(self.tasks,), daemon=True).start() for _ in
                         range(int(max(workers, MIN_WORKERS_NUM) / 2) + 1)]
         self._stream = BytesIO()
 
@@ -225,7 +225,7 @@ class KinesisHandler(StreamHandler):
 
         StreamHandler.__init__(self, self.stream)
 
-    def _teardown(self, _: int):
+    def _teardown(self, _: int, __):
         self.close()
 
     def close(self, *args, **kwargs):

@@ -107,9 +107,9 @@ class S3Stream(BufferedIOBase):
 
         self.bucket = bucket
         self._current_object = self._get_stream_object(self.current_file_name)
-        self.workers = [threading.Thread(target=task_worker, args=(self._rotation_queue,)).start() for _ in
+        self.workers = [threading.Thread(target=task_worker, args=(self._rotation_queue,), daemon=True).start() for _ in
                         range(int(max(workers, MIN_WORKERS_NUM) / 2) + 1)]
-        self._stream_bg_workers = [threading.Thread(target=task_worker, args=(self._stream_buffer_queue,)).start() for _
+        self._stream_bg_workers = [threading.Thread(target=task_worker, args=(self._stream_buffer_queue,), daemon=True).start() for _
                                    in range(max(int(max(workers, MIN_WORKERS_NUM) / 2), 1))]
 
         self._is_open = True
@@ -338,7 +338,7 @@ class S3Handler(StreamHandler):
 
         StreamHandler.__init__(self, self.stream)
 
-    def _teardown(self, _: int):
+    def _teardown(self, _: int, __):
         return self.close()
 
     def close(self, *args, **kwargs):
