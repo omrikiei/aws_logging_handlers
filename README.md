@@ -48,6 +48,8 @@ for i in range(0, 100000):
     logger.info("test info message")
     logger.warning("test warning message")
     logger.error("test error message")
+
+logging.shutdown()    
 ```
 
 ## To be developed
