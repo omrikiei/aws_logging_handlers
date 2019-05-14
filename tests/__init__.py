@@ -5,8 +5,8 @@ import time
 from localstack.services import infra
 from localstack.utils.aws import aws_stack
 from localstack import config
-from aws_logging_handlers import S3Handler
-from aws_logging_handlers import KinesisHandler
+from aws_logging_handlers.S3 import S3Handler
+from aws_logging_handlers.Kinesis import KinesisHandler
 
 
 class Base(unittest.TestCase):
@@ -26,11 +26,14 @@ class S3Test(Base):
         self.bucket = "test_log_bucket"
 
         self.s3_client.create_bucket(Bucket=self.bucket)
-        b_objects = [{'Key': o['Key']} for o in self.s3_client.list_objects(Bucket=self.bucket).get('Contents')]
+        try:
+            b_objects = [{'Key': o['Key']} for o in self.s3_client.list_objects(Bucket=self.bucket).get('Contents')]
 
-        self.s3_client.delete_objects(Bucket=self.bucket, Delete={
-            'Objects': b_objects
-        })
+            self.s3_client.delete_objects(Bucket=self.bucket, Delete={
+                'Objects': b_objects
+            })
+        except:
+            pass
 
     def tearDown(self):
         logging.getLogger('root').removeHandler(self.s3_handler)
@@ -53,7 +56,7 @@ class S3Test(Base):
             logger.error("test error message")
 
         bytes_written = s3_handler.stream.tell()
-        s3_handler.close()
+        #s3_handler.close()
 
         log_records = self.s3_client.list_objects(Bucket=self.bucket)
         assert (sum([s['Size'] for s in log_records['Contents']]) == bytes_written)
@@ -106,5 +109,3 @@ class KinesisTest(Base):
                 log_records = self.kinesis_client.get_records(ShardIterator=log_records['NextShardIterator'], Limit=1)
         finally:
             assert(log_accumulator == log_record_num*3)
-
-

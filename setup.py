@@ -12,7 +12,7 @@ def read(fname):
 setup(
     name='aws-logging-handlers',
     packages=find_packages(),
-    version='2.0.2',
+    version='2.0.3',
     description='Logging aws_logging_handlers to AWS services that support S3 and Kinesis stream logging with multiple threads',
     long_description=read('README.rst'),
     author='Omri Eival',
