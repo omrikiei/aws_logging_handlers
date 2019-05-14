@@ -18,7 +18,7 @@ setup(
     author='Omri Eival',
     author_email='omrieival@gmail.com',
     url='https://github.com/omrikiei/aws_logging_handlers/',
-    download_url='https://github.com/omrikiei/aws_logging_handlers/archive/2.0.2.tar.gz',
+    download_url='https://github.com/omrikiei/aws_logging_handlers/archive/2.0.3.tar.gz',
     keywords=['logging', 's3', 'aws', 'handler', 'amazon', 'stream', 'kinesis', 'firehose'],
     classifiers=[
         'Development Status :: 3 - Alpha',
