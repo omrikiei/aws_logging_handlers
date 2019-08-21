@@ -1,6 +1,6 @@
 # AWS Logging Handlers
 
-Please note: this package is usefull for unorchestrated applications(like Jupyter notebooks), if you are desinging a scalable and robust solution - I highly recommend on [leaving the handling of log records to an external tool](https://12factor.net/logs) and have your application to focus on it's business logic
+Please note: this package is useful for standalone applications(like Jupyter notebooks), if you are desinging a scalable and robust solution - I highly recommend on [leaving the handling of log records to an external tool](https://12factor.net/logs) and have your application to focus on it's business logic
 
 A python multithreaded logging handler package that streams records to AWS services objects with support for the following AWS services:
 * S3
