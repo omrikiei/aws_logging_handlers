@@ -331,15 +331,21 @@ class S3Handler(StreamHandler):
                                compress=compress, **boto_session_kwargs)
 
         # Make sure we gracefully clear the buffers and upload the missing parts before exiting
-        signal.signal(signal.SIGTERM, self._teardown)
-        signal.signal(signal.SIGINT, self._teardown)
-        signal.signal(signal.SIGQUIT, self._teardown)
+        self._sigterm_handler = signal.signal(signal.SIGTERM, self._teardown)
+        self._sigint_handler = signal.signal(signal.SIGINT, self._teardown)
+        self._sigquit_handler = signal.signal(signal.SIGQUIT, self._teardown)
         atexit.register(self.close)
 
         StreamHandler.__init__(self, self.stream)
 
-    def _teardown(self, _: int, __):
-        return self.close()
+    def _teardown(self, signum: int, frame):
+        self.close()
+        if signum == signal.SIGTERM:
+            self._sigterm_handler(signum, frame)
+        elif signum == signal.SIGINT:
+            self._sigint_handler(signum, frame)
+        elif signum == signal.SIGQUIT:
+            self._sigquit_handler(signum, frame)
 
     def close(self, *args, **kwargs):
         """
