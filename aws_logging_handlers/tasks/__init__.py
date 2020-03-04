@@ -13,6 +13,7 @@ def task_worker(q):
     while True:
         task = q.get()
         if task == STOP_SIGNAL:
+            q.task_done()
             return
         assert isinstance(task, (Task,)), "task should be of type `Task` only!"
         task.callable_func(*task.args, **task.kwargs)
