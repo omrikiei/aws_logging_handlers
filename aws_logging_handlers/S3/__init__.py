@@ -29,9 +29,9 @@ class StreamObject:
     Class representation of the AWS s3 object along with all the needed metadata to stream to s3
     """
 
-    def __init__(self, s3_resource, bucket_name, filename, buffer_queue):
+    def __init__(self, s3_resource, bucket_name, filename, buffer_queue, encryption):
         self.object = s3_resource.Object(bucket_name, filename)
-        self.uploader = self.object.initiate_multipart_upload()
+        self.uploader = self.object.initiate_multipart_upload(**encryption)
         self.bucket = bucket_name
         try:
             total_bytes = s3_resource.meta.client.head_object(Bucket=self.bucket.name, Key=filename)
@@ -70,7 +70,7 @@ class S3Stream(BufferedIOBase):
 
     def __init__(self, bucket: str, key: str, *, chunk_size: int = DEFAULT_CHUNK_SIZE,
                  max_file_log_time: int = DEFAULT_ROTATION_TIME_SECS, max_file_size_bytes: int = MAX_FILE_SIZE_BYTES,
-                 encoder: str = 'utf-8', workers: int = 1, compress: bool = False, **boto_session_kwargs):
+                 encoder: str = 'utf-8', workers: int = 1, compress: bool = False, encryption_options: dict = None, **boto_session_kwargs):
         """
 
         :param bucket: name of the s3 bucket
@@ -101,6 +101,7 @@ class S3Stream(BufferedIOBase):
         self.max_file_log_time = max_file_log_time
         self.max_file_size_bytes = max_file_size_bytes
         self.current_file_name = "{}_{}".format(key, int(datetime.utcnow().strftime('%s')))
+        self.encryption_options = encryption_options
         if compress:
             self.current_file_name = "{}.gz".format(self.current_file_name)
         self.encoder = encoder
@@ -169,7 +170,7 @@ class S3Stream(BufferedIOBase):
 
     def _get_stream_object(self, filename):
         try:
-            return StreamObject(self.s3, self.bucket.name, filename, self._stream_buffer_queue)
+            return StreamObject(self.s3, self.bucket.name, filename, self._stream_buffer_queue, self.encryption_options)
 
         except Exception:
             raise RuntimeError('Failed to open new S3 stream object')
