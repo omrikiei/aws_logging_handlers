@@ -11,7 +11,7 @@ def read(fname):
 
 setup(
     name='aws-logging-handlers',
-    packages=find_packages(),
+    packages=find_packages(exclude=['tests']),
     version='2.0.4',
     description='Logging aws_logging_handlers to AWS services that support S3 and Kinesis stream logging with multiple threads',
     long_description=read('README.rst'),
