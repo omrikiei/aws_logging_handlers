@@ -100,7 +100,7 @@ class S3Stream(BufferedIOBase):
         self.max_file_log_time = max_file_log_time
         self.max_file_size_bytes = max_file_size_bytes
         self.current_file_name = "{}_{}".format(key, int(datetime.utcnow().strftime('%s')))
-        self.encryption_options = encryption_options
+        self.encryption_options = encryption_options if encryption_options else {}
         if compress:
             self.current_file_name = "{}.gz".format(self.current_file_name)
         self.encoder = encoder
