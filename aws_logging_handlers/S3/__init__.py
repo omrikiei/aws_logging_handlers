@@ -65,9 +65,6 @@ class S3Stream(BufferedIOBase):
     stream interface used by the handler
     """
 
-    _stream_buffer_queue = queue.Queue()
-    _rotation_queue = queue.Queue()
-
     def __init__(self, bucket: str, key: str, *, chunk_size: int = DEFAULT_CHUNK_SIZE,
                  max_file_log_time: int = DEFAULT_ROTATION_TIME_SECS, max_file_size_bytes: int = MAX_FILE_SIZE_BYTES,
                  encoder: str = 'utf-8', workers: int = 1, compress: bool = False, encryption_options: dict = None, **boto_session_kwargs):
@@ -93,6 +90,8 @@ class S3Stream(BufferedIOBase):
         :type boto_session_kwargs: boto3 resource keyword arguments
         """
 
+        self._stream_buffer_queue = queue.Queue()
+        self._rotation_queue = queue.Queue()
         self._session = Session()
         self.s3 = self._session.resource('s3', **boto_session_kwargs)
         self.start_time = int(datetime.utcnow().strftime('%s'))
