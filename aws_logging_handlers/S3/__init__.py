@@ -293,7 +293,7 @@ class S3Handler(StreamHandler):
     def __init__(self, key: str, bucket: str, *, chunk_size: int = DEFAULT_CHUNK_SIZE,
                  time_rotation: int = DEFAULT_ROTATION_TIME_SECS, max_file_size_bytes: int = MAX_FILE_SIZE_BYTES,
                  encoder: str = 'utf-8',
-                 max_threads: int = 1, compress: bool = False, **boto_session_kwargs):
+                 workers: int = 1, compress: bool = False, **boto_session_kwargs):
         """
 
         :param key: The path of the S3 object
@@ -308,10 +308,10 @@ class S3Handler(StreamHandler):
         :type max_file_size_bytes: int
         :param encoder: default utf-8
         :type encoder: str
-        :param max_threads: the number of threads that a stream handler would run for file and chunk rotation tasks,
-               only useful if emitting lot's of records
-        :type max_threads: int
-        :param compress: indicating weather to save a compressed gz suffixed file
+        :param workers: the number of workers that a stream handler would run for
+            file and chunk rotation tasks; only useful if emitting lots of records
+        :type workers: int
+        :param compress: indicating whether to save a compressed gz-suffixed file
         :type compress: bool
         """
 
@@ -319,7 +319,7 @@ class S3Handler(StreamHandler):
             ValidationRule(time_rotation, is_positive_int, bad_integer_err('time_rotation')),
             ValidationRule(max_file_size_bytes, is_positive_int, bad_integer_err('max_file_size_bytes')),
             ValidationRule(encoder, is_non_empty_string, empty_str_err('encoder')),
-            ValidationRule(max_threads, is_positive_int, bad_integer_err('thread_count')),
+            ValidationRule(workers, is_positive_int, bad_integer_err('workers')),
         )
 
         for rule in args_validation:
@@ -327,7 +327,7 @@ class S3Handler(StreamHandler):
 
         self.bucket = bucket
         self.stream = S3Stream(self.bucket, key, chunk_size=chunk_size, max_file_log_time=time_rotation,
-                               max_file_size_bytes=max_file_size_bytes, encoder=encoder, workers=max_threads,
+                               max_file_size_bytes=max_file_size_bytes, encoder=encoder, workers=workers,
                                compress=compress, **boto_session_kwargs)
 
         # Make sure we gracefully clear the buffers and upload the missing parts before exiting
