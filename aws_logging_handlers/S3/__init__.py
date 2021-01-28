@@ -210,7 +210,7 @@ class S3Stream(BufferedIOBase):
     def _close_stream(stream_object, callback=None, *args, **kwargs):
         stream_object.join_tasks()
         if stream_object.chunk_count > 0:
-            stream_object.uploader.complete(MultipartUpload={'Parts': stream_object.parts})
+            stream_object.uploader.complete(MultipartUpload={'Parts': sorted(stream_object.parts, lambda p: p['PartNumber'])})
         else:
             stream_object.uploader.abort()
 
