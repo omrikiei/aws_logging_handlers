@@ -227,11 +227,11 @@ class KinesisHandler(StreamHandler):
 
     def _teardown(self, signum: int, frame):
         self.close()
-        if signum == signal.SIGTERM:
+        if signum == signal.SIGTERM and callable(self._sigterm_handler):
             self._sigterm_handler(signum, frame)
-        elif signum == signal.SIGINT:
+        elif signum == signal.SIGINT and callable(self._sigint_handler):
             self._sigint_handler(signum, frame)
-        elif signum == signal.SIGQUIT:
+        elif signum == signal.SIGQUIT and callable(self._sigquit_handler):
             self._sigquit_handler(signum, frame)
 
     def close(self, *args, **kwargs):
